@@ -40,7 +40,7 @@ def allocation_source_breakdown(allocation_source, start_date=None, end_date=Non
 
     for user in users:
         start_date_to_use=user.date_joined if not start_date else start_date
-        data,compute_used = allocation_source_breakdown_for(user.username,source.name,user.date_joined,end_date,csv)
+        data,compute_used = allocation_source_breakdown_for(user.username,source.name,start_date_to_use,end_date,csv)
         usage_data[user.username] = data
         usage_breakdown[user.username] = compute_used
     
