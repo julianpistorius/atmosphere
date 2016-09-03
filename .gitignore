@@ -53,3 +53,9 @@ clank
 *-extras/*
 secrets*
 scratch
+
+# Ignore CSV files created by the allocation source scripts
+*_report.csv
+allocation_usage.csv
+status_history.csv
+instance_sizes.csv
