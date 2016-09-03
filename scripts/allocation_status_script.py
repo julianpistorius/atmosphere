@@ -12,7 +12,8 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-def write_instance_history_file(db_connection_string, report_start_date, report_end_date, status_history_filename,username=None):
+def write_instance_history_file(db_connection_string, report_start_date, report_end_date, status_history_filename,
+                                username=None):
     required_query = '''
 SELECT
   ih.instance_id,
@@ -50,13 +51,12 @@ ORDER BY au.username,
     rows = db.query(required_query, report_start_date=report_start_date, report_end_date=report_end_date)
     output = rows.export('csv')
     if username:
-        filter_by_username(username,output,report_start_date,report_end_date)
+        filter_by_username(username, output, report_start_date, report_end_date)
     with open(status_history_filename, 'w') as f:
         f.write(output)
 
 
-def filter_by_username(uname,output,report_start_date,report_end_date):
-
+def filter_by_username(uname, output, report_start_date, report_end_date):
     filtered_output = []
 
     output = output.split('\n')
@@ -69,21 +69,20 @@ def filter_by_username(uname,output,report_start_date,report_end_date):
     for rows in output:
         if rows:
             col = rows.split(',')
-            if col[username] == uname and not parse(col[start_date]) > report_end_date :
-                if col[end_date] :
-                   if parse(col[end_date]) < report_start_date:
+            if col[username] == uname and not parse(col[start_date]) > report_end_date:
+                if col[end_date]:
+                    if parse(col[end_date]) < report_start_date:
                         continue
-                
+
                 filtered_output.append(rows)
 
-
     if filtered_output:
-        with open('%s_filtered_status_history.csv'%(uname),'w') as csvfile:
-            csvfile.write('instance_id,instance_history_id,start_date,end_date,status,activity,username,size,cpu,mem,disk\n')
+        with open('%s_filtered_status_history.csv' % (uname), 'w') as csvfile:
+            csvfile.write(
+                'instance_id,instance_history_id,start_date,end_date,status,activity,username,size,cpu,mem,disk\n')
             for i in filtered_output:
                 csvfile.write(i)
                 csvfile.write('\n')
-
 
 
 def calculate_user_allocation_usage(status_history_file_object, report_start_date, report_end_date):
@@ -100,7 +99,8 @@ def calculate_user_allocation_usage(status_history_file_object, report_start_dat
             continue
         if not row['username'] == current_user:
             current_user = row['username']
-            user_instance_history_data[current_user] = []  # TODO: Don't reset if there is already a 'current_user' entry.
+            # TODO: Don't reset if there is already a 'current_user' entry.
+            user_instance_history_data[current_user] = []
 
         user_instance_history_data[current_user].append(row)
 
@@ -286,7 +286,6 @@ if __name__ == '__main__':
             username_to_filter = sys.argv[3]
         except:
             username_to_filter = None
-     
 
         report_start_date = parse(report_start_string)
         report_end_date = parse(report_end_string)
@@ -305,8 +304,9 @@ if __name__ == '__main__':
 
     db_connection_string = 'postgres://%s:%s@%s:%s/%s' % (db_user, db_password, db_host, db_port, db_name)
 
-    write_instance_history_file(db_connection_string, report_start_date, report_end_date, 'status_history.csv',username_to_filter)
-    with open('status_history.csv','r') as status_history:
+    write_instance_history_file(db_connection_string, report_start_date, report_end_date, 'status_history.csv',
+                                username_to_filter)
+    with open('status_history.csv', 'r') as status_history:
         allocation_usage, user_instance_history_data, sizes = calculate_user_allocation_usage(status_history,
                                                                                               report_start_date,
                                                                                               report_end_date)
