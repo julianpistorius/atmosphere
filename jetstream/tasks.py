@@ -96,7 +96,7 @@ def create_reports():
     user_allocation_list = UserAllocationSource.objects.all()
     all_reports = []
     driver = TASAPIDriver()
-    end_date = timezone.now()
+    end_date = timezone.now()  # TODO: Is this an OK place to use timezone.now()? Maybe in report_allocations_to_tas task instead?
     for item in user_allocation_list:
         allocation_id = item.allocation_source.source_id
         tacc_username = driver.get_tacc_username(item.user)
@@ -132,13 +132,14 @@ def _create_tas_report_for(user, tacc_username, tacc_project_name, end_date):
     last_report = TASAllocationReport.objects.filter(
         project_name=tacc_project_name,
         user=user
-        ).order_by('end_date').last()
+    ).order_by(
+        'end_date').last()  # TODO: Should we also filter by TACC_API? Or something to indicate when to start reporting from the beginning?
     if not last_report:
         start_date = user.date_joined
     else:
         start_date = last_report.end_date
 
-    compute_used = total_usage(
+    compute_used = total_usage(  # TODO: Test whether this returns the correct number.
         user.username, start_date,
         allocation_source_name=tacc_project_name,
         end_date=end_date)
@@ -174,20 +175,26 @@ def report_allocations_to_tas():
 
 def send_reports():
     for tas_report in TASAllocationReport.objects.filter(success=False).order_by('user__username','start_date'):
-        tas_report.send()
+        tas_report.send()  # TODO: Don't try to send all of them at once. Batch them.
 
 @task(name="update_snapshot")
-def update_snapshot():
+def update_snapshot(source_ids=()):
     if not settings.USE_ALLOCATION_SOURCE:
         return False
     allocation_source_total_compute = {}
     allocation_source_total_burn_rate = {}
     end_date = timezone.now()
-    for source in AllocationSource.objects.order_by('source_id'):
+    if source_ids:
+        allocation_sources = AllocationSource.objects.filter(source_id__in=source_ids).order_by('source_id')
+    else:
+        AllocationSource.objects.order_by('source_id')
+    for source in allocation_sources:
         # iterate over user + allocation_source combo
-        for user_allocation_source in UserAllocationSource.objects.filter(allocation_source__exact=source.id).order_by('user__username'):
+        user_allocation_sources = UserAllocationSource.objects.filter(allocation_source__exact=source.id).order_by(
+            'user__username')
+        for user_allocation_source in user_allocation_sources:
             user = user_allocation_source.user
-            # determine end date and start date using last snapshot
+            # determine end date and start date using last snapshot - TODO
             start_date = user.date_joined
             # calculate compute used and burn rate for the user and allocation source combo
             compute_used, burn_rate = total_usage(user.username,start_date,allocation_source_name=source.name,end_date=end_date,burn_rate=True)
@@ -198,10 +205,11 @@ def update_snapshot():
             payload_ubr = {"allocation_source_id":source.source_id, "username":user.username, "burn_rate":burn_rate, "compute_used":compute_used}
             EventTable.create_event("user_allocation_snapshot_changed", payload_ubr, user.username)
 
-        payload_as = { 
-            "allocation_source_id":source.source_id, 
+        payload_as = {
+            "allocation_source_id": source.source_id,
             "compute_used":allocation_source_total_compute.get(source.name,0),
             "global_burn_rate":allocation_source_total_burn_rate.get(source.name,0)
         }
-        EventTable.create_event("allocation_source_snapshot", payload_as,source.name)
+        EventTable.create_event("allocation_source_snapshot", payload_as,
+                                source.name)  # TODO: entity_id should be 'source_id'
     return True
