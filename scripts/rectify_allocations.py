@@ -1,9 +1,8 @@
 import django
 django.setup()
 import logging
-from django.conf import settings
 import sys
-from latest_json import data as json_data  # Comment this line on prod server
+# from latest_json import data as json_data  # Comment this line on prod server
 from pprint import pprint
 from django.utils import timezone
 from core.models.user import AtmosphereUser
@@ -18,11 +17,18 @@ from jetstream.exceptions import TASPluginException
 
 logger = logging.getLogger(__name__)
 
+USE_TAS_PROD = False
+
+if USE_TAS_PROD:
+    from atmosphere.settings.local import TACC_API_URL, TACC_API_USER, TACC_API_PASS
+else:
+    from atmosphere.settings.local import BETA_TACC_API_URL as TACC_API_URL, BETA_TACC_API_USER as TACC_API_USER, \
+        BETA_TACC_API_PASS as TACC_API_PASS
 
 def calculate_correction():
     end_date = TASAllocationReport.objects.all().order_by('end_date').last().end_date
     users = AtmosphereUser.objects.all()
-    driver = TASAPIDriver()
+    driver = TASAPIDriver(TACC_API_URL, TACC_API_USER, TACC_API_PASS)
     output = []
     # uncomment this line in prod
     tacc_username_list = {user.username: driver.get_tacc_username(user) for
@@ -129,7 +135,7 @@ def _create_tas_report_for(user, tacc_username, tacc_project_name, end_date, cor
         compute_used=correction_value,
         start_date=start_date,
         end_date=end_date,
-        tacc_api=settings.TACC_API_URL)
+        tacc_api=TACC_API_URL)
     logger.info("Created New Report:%s" % new_report)
     return new_report
 
