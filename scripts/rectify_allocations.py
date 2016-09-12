@@ -1,6 +1,8 @@
 import json
 
 import django
+from dateutil.parser import parse
+
 django.setup()
 import logging
 import sys
@@ -10,7 +12,6 @@ from django.utils import timezone
 from core.models.user import AtmosphereUser
 from core.models.allocation_source import (
     AllocationSource,
-    UserAllocationSource,
     total_usage)
 from jetstream.models import TASAllocationReport, TASAPIDriver
 from jetstream.exceptions import TASPluginException
@@ -27,9 +28,13 @@ else:
     from atmosphere.settings.local import BETA_TACC_API_URL as TACC_API_URL, BETA_TACC_API_USER as TACC_API_USER, \
         BETA_TACC_API_PASS as TACC_API_PASS
 
-def calculate_correction():
+
+def calculate_correction(report_end_date=None):
     print 'START calculate_correction'
-    end_date = TASAllocationReport.objects.all().order_by('end_date').last().end_date
+    if report_end_date:
+        end_date = report_end_date
+    else:
+        end_date = TASAllocationReport.objects.all().order_by('end_date').last().end_date
     users = AtmosphereUser.objects.all()
     driver = TASAPIDriver(TACC_API_URL, TACC_API_USER, TACC_API_PASS)
     output = []
@@ -109,7 +114,6 @@ def create_reports(correction_data):
     # user_allocation_list = UserAllocationSource.objects.all()
     # all_reports = []
     # driver = TASAPIDriver()
-    end_date = timezone.now()
     # for item in user_allocation_list:
     user = correction_data[0]
     allocation_id = correction_data[3]
@@ -120,18 +124,15 @@ def create_reports(correction_data):
         user,
         tacc_username,
         project_name,
-        end_date,
         correction_value)
     print 'END create_reports'
     return project_report
 
 
-def _create_tas_report_for(user, tacc_username, tacc_project_name, end_date, correction_value):
+def _create_tas_report_for(user, tacc_username, tacc_project_name, report_end_date, correction_value):
     """
     Create a new report
     """
-    if not end_date:
-        raise TASPluginException("Explicit end date required")
     if not user:
         raise TASPluginException("User missing")
     if not tacc_username:
@@ -145,8 +146,13 @@ def _create_tas_report_for(user, tacc_username, tacc_project_name, end_date, cor
     ).order_by('end_date').last()
     if not last_report:
         start_date = user.date_joined
+        if not report_end_date:
+            end_date = timezone.now()
+        else:
+            end_date = report_end_date
     else:
         start_date = last_report.end_date
+        end_date = last_report.end_date
 
     new_report = TASAllocationReport.objects.create(
         user=user,
@@ -163,11 +169,17 @@ if __name__ == '__main__':
     # use this in production
     # tas_obj = TASAPIDriver()
     # json_data = tas_obj.get_all_allocations()
+    try:
+        report_end_string = sys.argv[len(sys.argv) - 1]
+        report_end_date = parse(report_end_string)
+    except:
+        report_end_date = None
+
     if len(sys.argv) > 1 and sys.argv[1] == '--create':
-        delta = calculate_correction()
+        delta = calculate_correction(report_end_date=report_end_date)
         for row in delta:
             correction_value = row[4]
             if correction_value:
-                create_reports(row)
+                create_reports(row, report_end_date=report_end_date)
     else:
         pprint(calculate_correction())
