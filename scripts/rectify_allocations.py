@@ -1,3 +1,5 @@
+import json
+
 import django
 django.setup()
 import logging
@@ -26,24 +28,39 @@ else:
         BETA_TACC_API_PASS as TACC_API_PASS
 
 def calculate_correction():
+    print 'START calculate_correction'
     end_date = TASAllocationReport.objects.all().order_by('end_date').last().end_date
     users = AtmosphereUser.objects.all()
     driver = TASAPIDriver(TACC_API_URL, TACC_API_USER, TACC_API_PASS)
     output = []
     # uncomment this line in prod
-    tacc_username_list = {user.username: driver.get_tacc_username(user) for
-                          user in users}
+    try:
+        print 'Going to try loading usernames from JSON'
+        with open('tacc_usernames.json', 'r') as f:
+            tacc_username_list = json.load(f)
+        print tacc_username_list
+        print 'Loaded usernames'
+    except:
+        print 'Failed at loading usernames from JSON. About to get usernames from TAS API'
+        tacc_username_list = {user.username: driver.get_tacc_username(user) for
+                              user in users}
+        print tacc_username_list
+        print 'Got usernames'
+        with open('tacc_usernames.json', 'w') as f:
+            json.dump(tacc_username_list, f)
+    print 'About to start calculating corrections'
     for allocation_source in AllocationSource.objects.all():
         output.extend(
             calculate_correction_for(
                 allocation_source,
                 end_date,
                 tacc_username_list))
+    print 'END calculate_correction'
     return output
 
 
 def calculate_correction_for(allocation_source, end_date, tacc_username_list):
-
+    print 'START calculate_correction_for: %s' % allocation_source.name
     correction_delta = []
 
     for user in allocation_source.all_users:
@@ -66,6 +83,7 @@ def calculate_correction_for(allocation_source, end_date, tacc_username_list):
             allocation_source.source_id,
             delta,
             usage_not_reported))
+    print 'END calculate_correction_for: %s' % allocation_source.name
     return correction_delta
 
 
@@ -87,6 +105,7 @@ def create_reports(correction_data):
     For each username, get an XSede API map to the 'TACC username'
     if 'TACC username' includes a jetstream resource, create a report
     """
+    print 'START create_reports'
     # user_allocation_list = UserAllocationSource.objects.all()
     # all_reports = []
     # driver = TASAPIDriver()
@@ -103,6 +122,7 @@ def create_reports(correction_data):
         project_name,
         end_date,
         correction_value)
+    print 'END create_reports'
     return project_report
 
 
