@@ -29,12 +29,9 @@ else:
         BETA_TACC_API_PASS as TACC_API_PASS
 
 
-def calculate_correction(report_end_date=None):
+def calculate_correction():
     print 'START calculate_correction'
-    if report_end_date:
-        end_date = report_end_date
-    else:
-        end_date = TASAllocationReport.objects.all().order_by('end_date').last().end_date
+    end_date = TASAllocationReport.objects.all().order_by('end_date').last().end_date
     users = AtmosphereUser.objects.all()
     driver = TASAPIDriver(TACC_API_URL, TACC_API_USER, TACC_API_PASS)
     output = []
@@ -111,6 +108,7 @@ def create_reports(correction_data):
     if 'TACC username' includes a jetstream resource, create a report
     """
     print 'START create_reports'
+    end_date = TASAllocationReport.objects.all().order_by('-end_date').first().end_date
     # user_allocation_list = UserAllocationSource.objects.all()
     # all_reports = []
     # driver = TASAPIDriver()
@@ -124,12 +122,13 @@ def create_reports(correction_data):
         user,
         tacc_username,
         project_name,
+        end_date,
         correction_value)
     print 'END create_reports'
     return project_report
 
 
-def _create_tas_report_for(user, tacc_username, tacc_project_name, report_end_date, correction_value):
+def _create_tas_report_for(user, tacc_username, tacc_project_name, end_date, correction_value):
     """
     Create a new report
     """
@@ -146,14 +145,8 @@ def _create_tas_report_for(user, tacc_username, tacc_project_name, report_end_da
     ).order_by('end_date').last()
     if not last_report:
         start_date = user.date_joined
-        if not report_end_date:
-            end_date = timezone.now()
-        else:
-            end_date = report_end_date
     else:
         start_date = last_report.end_date
-        end_date = last_report.end_date
-
     new_report = TASAllocationReport.objects.create(
         user=user,
         username=tacc_username,
@@ -169,17 +162,12 @@ if __name__ == '__main__':
     # use this in production
     # tas_obj = TASAPIDriver()
     # json_data = tas_obj.get_all_allocations()
-    try:
-        report_end_string = sys.argv[len(sys.argv) - 1]
-        report_end_date = parse(report_end_string)
-    except:
-        report_end_date = None
 
     if len(sys.argv) > 1 and sys.argv[1] == '--create':
-        delta = calculate_correction(report_end_date=report_end_date)
+        delta = calculate_correction()
         for row in delta:
             correction_value = row[4]
             if correction_value:
-                create_reports(row, report_end_date=report_end_date)
+                create_reports(row)
     else:
         pprint(calculate_correction())
