@@ -85,7 +85,7 @@ def monitor_jetstream_allocation_sources():
     return resources
 
 
-def create_reports():
+def create_reports(end_date):
     """
     GO through the list of all users or all providers
     For each username, get an XSede API map to the 'TACC username'
@@ -94,7 +94,6 @@ def create_reports():
     user_allocation_list = UserAllocationSource.objects.all()
     all_reports = []
     driver = TASAPIDriver()
-    end_date = timezone.now()
     for item in user_allocation_list:
         allocation_id = item.allocation_source.source_id
         tacc_username = driver.get_tacc_username(item.user)
@@ -163,7 +162,8 @@ def report_allocations_to_tas():
     if 'jetstream' not in settings.INSTALLED_APPS:
         return
     logger.info("Reporting: Begin creating reports")
-    create_reports()
+    end_date = timezone.now()
+    create_reports(end_date)
     logger.info("Reporting: Completed, begin sending reports")
     send_reports()
     logger.info("Reporting: Reports sent")
