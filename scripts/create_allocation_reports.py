@@ -43,6 +43,8 @@ if __name__ == '__main__':
         atmo_users = AtmosphereUser.objects.all()
         driver = TASAPIDriver(TACC_API_URL, TACC_API_USER, TACC_API_PASS)
         atmo_to_tacc_usernames = {user.username: driver.get_tacc_username(user) for user in atmo_users}
+        with open('tacc_usernames.json', 'w') as f:
+            json.dump(atmo_to_tacc_usernames, f)
         print 'Loaded usernames from TAS API'
     all_reports = []
     print 'About to create a reports'
