@@ -58,5 +58,6 @@ if __name__ == '__main__':
             tacc_username,
             project_name,
             end_date)
+        all_reports.append(project_report)
 
     print 'Number of reports created: %d' % len(all_reports)
