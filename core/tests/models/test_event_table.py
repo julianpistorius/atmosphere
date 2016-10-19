@@ -63,24 +63,6 @@ class AllocationSourceSnapshotEventTestValidEvents(AllocationSourceSnapshotEvent
                     }
             },
             {
-                'description': 'Extra field should be stripped out by serializer',
-                'entity_id': self.alloc_src.source_id,
-                'name': 'allocation_source_snapshot',
-                'raw_payload':
-                    {
-                        'allocation_source_id': self.alloc_src.source_id,
-                        'compute_used': 10.00,
-                        'global_burn_rate': 2.00,
-                        'extra_field': 'some_value'
-                    },
-                'expected_serialized_payload':
-                    {
-                        'allocation_source_id': self.alloc_src.source_id,
-                        'compute_used': 10.00,
-                        'global_burn_rate': 2.00
-                    }
-            },
-            {
                 'description': 'String instead of float - String should be converted to float',
                 'entity_id': self.alloc_src.source_id,
                 'name': 'allocation_source_snapshot',
@@ -130,7 +112,8 @@ class AllocationSourceSnapshotEventTestInvalidEvents(AllocationSourceSnapshotEve
                         'allocation_souce_id': self.alloc_src.source_id,  # Case: Typo in field name
                         'compute_used': 10.00,
                         'global_burn_rate': 2.00,
-                    }
+                    },
+                'exception_message': 'Event serializer keys do not match payload keys'
             },
             {
                 'description': 'Missing field',
@@ -141,7 +124,21 @@ class AllocationSourceSnapshotEventTestInvalidEvents(AllocationSourceSnapshotEve
                         'allocation_source_id': self.alloc_src.source_id,
                         'compute_used': '10.00',
                         # Case: Missing field
-                    }
+                    },
+                'exception_message': 'Event serializer keys do not match payload keys'
+            },
+            {
+                'description': 'Extra field',
+                'entity_id': self.alloc_src.source_id,
+                'name': 'allocation_source_snapshot',
+                'raw_payload':
+                    {
+                        'allocation_source_id': self.alloc_src.source_id,
+                        'compute_used': 10.00,
+                        'global_burn_rate': 2.00,
+                        'extra_field': 'some_value'  # Case: Extra field
+                    },
+                'exception_message': 'Event serializer keys do not match payload keys'
             },
             {
                 'description': 'TODO: Unknown Allocation Source',
@@ -180,7 +177,8 @@ class AllocationSourceSnapshotEventTestInvalidEvents(AllocationSourceSnapshotEve
                                         entity_id=self.alloc_src.source_id)
             except exceptions.ValidationError as validation_error:
                 self.assertEqual(validation_error.code, 'event_schema')
-                self.assertEqual(validation_error.message, 'Does not comply with event schema')
+                expected_exception_message = event_data.get('exception_message', 'Does not comply with event schema')
+                self.assertEqual(validation_error.message, expected_exception_message)
             else:
                 missing_error_cases.append(event_data['description'])
 

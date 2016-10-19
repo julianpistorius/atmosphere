@@ -60,8 +60,9 @@ EVENT_SERIALIZERS = {
 }
 
 
-def validate_event_schema(event_name, event_payload):
+def validate_event_schema(event, payload_strict_keys=True):
     code = 'event_schema'
+    event_name, event_payload = event.name, event.payload
     try:
         serializer_class = EVENT_SERIALIZERS[event_name]
     except KeyError:
@@ -69,9 +70,21 @@ def validate_event_schema(event_name, event_payload):
         message = 'Unrecognized event name: {}'.format(event_name)
         params = {'limit_value': limit_value, 'show_value': event_name, 'value': event_name}
         raise exceptions.ValidationError(message, code=code, params=params)
+
+    serializer = serializer_class()
+    assert isinstance(serializer, serializers.Serializer)
+
+    if payload_strict_keys:
+        serializer_keys = serializer.fields.keys()
+        payload_keys = event_payload.keys()
+        if set(serializer_keys) != set(payload_keys):
+            logger.warn('Event serializer keys do not match payload keys: {} != {}'.format(serializer_keys,
+                                                                                           payload_keys))
+            message = 'Event serializer keys do not match payload keys'
+            limit_value = serializer_keys
+            params = {'limit_value': limit_value, 'show_value': event_payload, 'value': event_payload}
+            raise exceptions.ValidationError(message, code=code, params=params)
     try:
-        serializer = serializer_class()
-        assert isinstance(serializer, serializers.Serializer)
         validated_data = serializer.run_validation(data=event_payload)
         serialized_payload = validated_data
         return serialized_payload
@@ -87,7 +100,7 @@ def validate_event_schema(event_name, event_payload):
 
 def pre_save_validate_hook(sender, instance, raw, **kwargs):
     event = instance
-    serialized_payload = validate_event_schema(event.name, event.payload)
+    serialized_payload = validate_event_schema(event)
     event.payload = serialized_payload
     return
 

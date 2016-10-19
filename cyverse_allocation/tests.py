@@ -1,27 +1,13 @@
+import pprint
 import uuid
 
 from django.conf import settings
+from django.core import exceptions
 from django.test import TestCase
 
 from api.tests.factories import UserFactory
 from core.models import AllocationSource
 from core.models import EventTable
-
-
-# TODO:
-# - Multiple allocation_source_created events for the same source_id
-# - Multiple allocation_source_created events for the same name
-# - Invalid compute_allowed (-1, '5000', NaN)
-# - Use Hypothesis to generate
-#
-# - allocation_source_deactivated event
-#   - What happens to a user who has this as an allocation source
-#   - What happens to an instance running with this as a source
-#
-# - allocation_source_updated
-#   - What happens if the compute used changed
-#   - What happens if you try to change the source_id
-#   - What happens if you try to update a source which doesn't exist
 from core.models import UserAllocationSource
 
 
@@ -131,3 +117,52 @@ class CyVerseAllocationTests(TestCase):
                          new_allocation_source['compute_allowed'])
         self.assertEqual(user_allocation_source.allocation_source.source_id, new_allocation_source['source_id'])
         self.assertEqual(user_allocation_source.allocation_source.name, new_allocation_source['name'])
+
+    def test_instance_allocation_source_changed_validators(self):
+        # Valid:
+        # {'instance_id': 'bb0d193a-3da4-413a-b91d-1f054fba7af6', 'allocation_source_id': '27475'}
+        # Invalid:
+        # '64436cbb-ce43-45b4-b9a2-2086575d2cf2'
+        # {'username': 'iparask', 'instance_id': '64436cbb-ce43-45b4-b9a2-2086575d2cf2', 'allocation_source_id': '39262'}
+
+        new_allocation_source = {
+            'source_id': str(uuid.uuid4()),
+            'name': 'TestAllocationSourceCreateScenario',
+            'compute_allowed': 50000
+        }
+        EventTable.create_event(name='allocation_source_created',
+                                payload=new_allocation_source,
+                                entity_id=new_allocation_source['source_id'])
+        user = UserFactory.create()
+        new_user_allocation_source = {
+            'source_id': new_allocation_source['source_id'],
+            'username': user.username
+        }
+        # Add an event 'allocation_source_created' with our test source name
+        EventTable.create_event(name='user_allocation_source_assigned',
+                                payload=new_user_allocation_source,
+                                entity_id=new_user_allocation_source['username'])
+
+        valid_instance_allocation_changed_payload = {
+            'instance_id': 'bb0d193a-3da4-413a-b91d-1f054fba7af6',
+            'allocation_source_id': new_allocation_source['source_id']
+        }
+
+        valid_event = EventTable.create_event(name='instance_allocation_source_changed',
+                                              payload=valid_instance_allocation_changed_payload,
+                                              entity_id=new_user_allocation_source['username'])
+        pprint.pprint(valid_event)
+
+        invalid_instance_allocation_changed_payload = {
+            'username': new_user_allocation_source['username'],
+            'instance_id': 'bb0d193a-3da4-413a-b91d-1f054fba7af6',
+            'allocation_source_id': new_allocation_source['source_id']
+        }
+        with self.assertRaises(exceptions.ValidationError) as validation_error:
+            EventTable.create_event(name='instance_allocation_source_changed',
+                                    payload=invalid_instance_allocation_changed_payload,
+                                    entity_id='bb0d193a-3da4-413a-b91d-1f054fba7af6')
+
+        self.assertEqual(validation_error.exception.code, 'event_schema')
+        # noinspection SpellCheckingInspection
+        self.assertEqual(validation_error.exception.message, 'Event serializer keys do not match payload keys')
