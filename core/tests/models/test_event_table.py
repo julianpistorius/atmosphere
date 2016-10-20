@@ -177,7 +177,7 @@ class AllocationSourceSnapshotEventTestInvalidEvents(AllocationSourceSnapshotEve
                                         entity_id=self.alloc_src.source_id)
             except exceptions.ValidationError as validation_error:
                 self.assertEqual(validation_error.code, 'event_schema')
-                expected_exception_message = event_data.get('exception_message', 'Does not comply with event schema')
+                expected_exception_message = event_data['exception_message']
                 self.assertEqual(validation_error.message, expected_exception_message)
             else:
                 missing_error_cases.append(event_data['description'])

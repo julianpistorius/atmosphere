@@ -68,7 +68,7 @@ def validate_event_schema(event, payload_strict_keys=True):
     except KeyError:
         limit_value = EVENT_SERIALIZERS.keys()
         message = 'Unrecognized event name: {}'.format(event_name)
-        params = {'limit_value': limit_value, 'show_value': event_name, 'value': event_name}
+        params = {'limit_value': limit_value, 'show_value': event_name, 'value': event}
         raise exceptions.ValidationError(message, code=code, params=params)
 
     serializer = serializer_class()
@@ -82,7 +82,7 @@ def validate_event_schema(event, payload_strict_keys=True):
                                                                                            payload_keys))
             message = 'Event serializer keys do not match payload keys'
             limit_value = serializer_keys
-            params = {'limit_value': limit_value, 'show_value': event_payload, 'value': event_payload}
+            params = {'limit_value': limit_value, 'show_value': payload_keys, 'value': event}
             raise exceptions.ValidationError(message, code=code, params=params)
     try:
         validated_data = serializer.run_validation(data=event_payload)
@@ -90,9 +90,9 @@ def validate_event_schema(event, payload_strict_keys=True):
         return serialized_payload
     except Exception as e:
         logger.warn(e)
-        message = 'Does not comply with event schema'
+        message = 'Payload does not comply with event schema'
         limit_value = serializer_class
-        params = {'limit_value': limit_value, 'show_value': event_payload, 'value': event_payload}
+        params = {'limit_value': limit_value, 'show_value': event_payload, 'value': event}
         raise exceptions.ValidationError(message, code=code, params=params)
 
 
