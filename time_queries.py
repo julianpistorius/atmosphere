@@ -35,4 +35,4 @@ print 'burn_rate: {}'.format(burn_rate)
 # CPU times: user 716 ms, sys: 48 ms, total: 764 ms
 # Wall time: 19.8 s
 
-print 'queries: {}'.format(len(db.connection.queries))
+print '# queries: {}'.format(len(db.connection.queries))
