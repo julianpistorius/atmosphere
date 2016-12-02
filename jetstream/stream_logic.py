@@ -10,7 +10,8 @@ InstanceStatusHistoryItem = collections.namedtuple('InstanceStatusHistoryItem', 
                                                                                  'size__cpu',
                                                                                  'status__name',
                                                                                  'start_date',
-                                                                                 'instance__created_by__username'])
+                                                                                 'instance__created_by__username',
+                                                                                 'instance__provider_alias'])
 EventItem = collections.namedtuple('EventItem', ['id',
                                                  'uuid',
                                                  'entity_id',
@@ -28,7 +29,8 @@ Instance = collections.namedtuple('Instance', ['id',
                                                'start_date',
                                                'last_updated',
                                                'event_count',
-                                               'active_duration'])
+                                               'active_duration',
+                                               'provider_alias'])
 User = collections.namedtuple('User', ['username',
                                        'inactive_instances',
                                        'active_instances',
@@ -37,7 +39,7 @@ AllocationSource = collections.namedtuple('AllocationSource', ['id',
                                                                'users',
                                                                'all_usage'])
 Accumulator = collections.namedtuple('Accumulator', ['instances',
-                                                     'active_instance_ids',
+                                                     'active_provider_aliases',
                                                      'users',
                                                      'allocation_sources',
                                                      'statuses',
@@ -63,6 +65,7 @@ def instance_apply_status_history(instance, instance_status_history):
     if instance:
         assert isinstance(instance, Instance)
         assert instance.id == ish.instance_id
+        assert instance.provider_alias == ish.instance__provider_alias
         active_duration = instance.active_duration
         if is_instance_active(instance):
             active_duration_since_last_event = ish.start_date - instance.last_updated
@@ -89,7 +92,8 @@ def instance_apply_status_history(instance, instance_status_history):
                                     start_date=ish.start_date,
                                     last_updated=ish.start_date,
                                     event_count=1,
-                                    active_duration=datetime.timedelta())
+                                    active_duration=datetime.timedelta(),
+                                    provider_alias=ish.instance__provider_alias)
 
     return updated_instance
 
@@ -110,11 +114,11 @@ def user_apply_instance_change(user, instance, updated_instance):
     :rtype: User
     """
     if is_instance_active(updated_instance):
-        user.active_instances.add(updated_instance.id)
-        user.inactive_instances.discard(updated_instance.id)
+        user.active_instances.add(updated_instance.provider_alias)
+        user.inactive_instances.discard(updated_instance.provider_alias)
     else:
-        user.active_instances.discard(updated_instance.id)
-        user.inactive_instances.add(updated_instance.id)
+        user.active_instances.discard(updated_instance.provider_alias)
+        user.inactive_instances.add(updated_instance.provider_alias)
 
     if instance and is_instance_active(instance):
         assert isinstance(instance, Instance)
@@ -141,15 +145,15 @@ def handle_instance_status(accumulator, item):
     accumulator.activities[instance_status_history.activity] += 1
 
     assert isinstance(accumulator.instances, dict)
-    instance = accumulator.instances.get(instance_status_history.instance_id)  # Use a `defaultdict` here?
+    instance = accumulator.instances.get(instance_status_history.instance__provider_alias)  # Use a `defaultdict` here?
     updated_instance = instance_apply_status_history(instance, instance_status_history)
-    accumulator.instances[instance_status_history.instance_id] = updated_instance
+    accumulator.instances[instance_status_history.instance__provider_alias] = updated_instance
 
-    assert isinstance(accumulator.active_instance_ids, set)
+    assert isinstance(accumulator.active_provider_aliases, set)
     if is_instance_active(updated_instance):
-        accumulator.active_instance_ids.add(updated_instance.id)
+        accumulator.active_provider_aliases.add(updated_instance.provider_alias)
     else:
-        accumulator.active_instance_ids.discard(updated_instance.id)
+        accumulator.active_provider_aliases.discard(updated_instance.provider_alias)
 
     assert isinstance(accumulator.users, dict)
     username = instance_status_history.instance__created_by__username
@@ -193,12 +197,12 @@ def handle_heartbeat(accumulator, item):
         return None
     assert isinstance(accumulator, Accumulator)
     assert isinstance(accumulator.instances, dict)
-    assert isinstance(accumulator.active_instance_ids, set)
+    assert isinstance(accumulator.active_provider_aliases, set)
 
-    for instance_id in accumulator.active_instance_ids:
-        instance = accumulator.instances[instance_id]
+    for provider_alias in accumulator.active_provider_aliases:
+        instance = accumulator.instances[provider_alias]
         updated_instance = instance_apply_heartbeat(instance, heartbeat)
-        accumulator.instances[instance_id] = updated_instance
+        accumulator.instances[provider_alias] = updated_instance
 
     return accumulator
 
@@ -206,9 +210,9 @@ def handle_heartbeat(accumulator, item):
 def instance_apply_event(instance, event):
     assert isinstance(event, EventItem)
     assert isinstance(instance, Instance)
-    if event.payload['instance_id'] != instance.id:
+    if event.payload['instance_id'] != instance.provider_alias:
         raise ValueError('event instance_id does not match instance: {} > {}'.format(event.payload['instance_id'],
-                                                                                     instance.id))
+                                                                                     instance.provider_alias))
     if event.timestamp < instance.last_updated:
         raise ValueError('instance is newer than the event: {} > {}'.format(instance, event))
     if event.name != 'instance_allocation_source_changed':
@@ -218,7 +222,9 @@ def instance_apply_event(instance, event):
     active_duration = instance.active_duration
     current_allocation_source = instance.current_allocation_source
     if new_allocation_source == current_allocation_source:
-        raise ValueError('new_allocation_source_id == current_allocation_source')
+        # raise ValueError('new_allocation_source_id == current_allocation_source')
+        # Assume this is OK for now...
+        pass
     if is_instance_active(instance):
         active_duration_since_last_event = event.timestamp - instance.last_updated
         current_allocation_source_duration = instance.allocations_durations.get(current_allocation_source,
@@ -252,15 +258,15 @@ def handle_event(accumulator, item):
 
     # print event_item.name, event_item.entity_id, event_item.payload
     if event_item.name == 'instance_allocation_source_changed':
-        instance_id = event_item.payload['instance_id']
+        provider_alias = event_item.payload['instance_id']
         try:
-            instance = accumulator.instances[instance_id]
+            instance = accumulator.instances[provider_alias]
             updated_instance = instance_apply_event(instance, event_item)
-            accumulator.instances[instance_id] = updated_instance
+            accumulator.instances[provider_alias] = updated_instance
         except KeyError:
             # print('Can\'t find instance for the event: {}'.format(event_item))
-            accumulator.instances_missing[instance_id] += 1
-            # raise
+            # accumulator.instances_missing[provider_alias] += 1
+            raise
     return accumulator
 
 
@@ -313,14 +319,15 @@ def batch_calculate_system_state(end_date):
              'size__cpu',
              'status__name',
              'start_date',
-             'instance__created_by__username').order_by('start_date')
+             'instance__created_by__username',
+             'instance__provider_alias').order_by('start_date')
 
     heart_beat = [{'timestamp': end_date}]
     event_stream = more_itertools.collate(events_queryset, instance_status_histories_queryset, key=key_function)
     event_stream = itertools.chain(event_stream, heart_beat)
 
     initial_state = Accumulator(instances={},
-                                active_instance_ids=set(),
+                                active_provider_aliases=set(),
                                 users={},
                                 allocation_sources={},
                                 statuses=collections.Counter(),
