@@ -58,7 +58,8 @@ class TASAPIDriver(object):
         try:
             tacc_user = self._xsede_to_tacc_username(
                 user.username)
-        except:
+        except Exception as e:
+            logger.exception('Exception happened while getting TACC username for XSEDE user: %s' % user.username, e)
             logger.info("User: %s has no tacc username" % user.username)
             tacc_user = None
         else:
@@ -228,7 +229,7 @@ class TASAPIDriver(object):
             logger.info(exc)
         return user_names
 
-    
+
 
     def get_user_allocations(self, username, include_expired=False, raise_exception=True):
         path = '/v1/projects/username/%s' % username
