@@ -42,7 +42,7 @@ uWSGI
 
 ## ours
 chromogenic
-django-cyverse-auth
+-e git+https://github.com/cdosborn/django-cyverse-auth.git@v27-fix-create-or-update#egg=django-cyverse-auth
 threepio
 rtwo
 subspace
