@@ -33,10 +33,6 @@ urlpatterns = [
     url(r'^api-token-auth/',
         ObtainAuthToken.as_view()),
 
-    # Self-service dashboard for Jetstream admin users
-    # TODO: Make this contingent on the `jetstream` app being in `INSTALLED_APPS`
-    url(r'^admin/jetstream/tasapiquery/$', run_tas_api_query, name='run_tas_api_query'),
-
     # DB Admin Panel for admin users
     url(r'^admin/', include(admin.site.urls))
 ]

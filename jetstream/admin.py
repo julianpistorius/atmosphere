@@ -1,6 +1,7 @@
+from django.conf.urls import url
 from django.contrib import admin
 from jetstream import models
-from jetstream.jetstream_selfservice import TASAPIQuery
+from jetstream.jetstream_selfservice import TASAPIQuery, run_tas_api_query
 
 
 @admin.register(models.TASAllocationReport)
@@ -12,5 +13,11 @@ class TASReportAdmin(admin.ModelAdmin):
 
 @admin.register(TASAPIQuery)
 class TASAPIQueryAdmin(admin.ModelAdmin):
+    def get_urls(self):
+        my_urls = [
+            url(r'^$', self.admin_site.admin_view(run_tas_api_query), name='jetstream_tasapiquery_changelist'),
+        ]
+        return my_urls
+
     def has_add_permission(self, request):
         return False
