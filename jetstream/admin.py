@@ -3,8 +3,9 @@ from django.contrib.admin.options import csrf_protect_m
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 
+from core.admin_panel import AbstractAdminPanel
 from jetstream import models
-from jetstream.selfservice import TASAPIQuery, run_tas_api_query, AbstractSelfServiceModelAdmin
+from jetstream.admin_panel import tas_api_panel
 
 
 @admin.register(models.TASAllocationReport)
@@ -14,9 +15,9 @@ class TASReportAdmin(admin.ModelAdmin):
     list_filter = ["success", "project_name"]
 
 
-@admin.register(TASAPIQuery)
-class TASAPIQueryAdmin(AbstractSelfServiceModelAdmin):
+@admin.register(tas_api_panel.TASAPIQuery)
+class TASAPIQueryAdminPanel(AbstractAdminPanel):
     @csrf_protect_m
     @method_decorator(staff_member_required)
     def changelist_view(self, request, extra_context=None):
-        return run_tas_api_query(request)
+        return tas_api_panel.run_tas_api_query(request)
