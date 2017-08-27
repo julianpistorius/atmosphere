@@ -8,7 +8,6 @@ from django.conf import settings
 from django.conf.urls import url, include
 from rest_framework.authtoken.views import ObtainAuthToken
 from api.auth import Authentication
-from jetstream.jetstream_selfservice import run_tas_api_query
 
 admin.autodiscover()
 

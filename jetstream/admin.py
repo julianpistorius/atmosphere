@@ -5,7 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 
 from jetstream import models
-from jetstream.jetstream_selfservice import TASAPIQuery, run_tas_api_query
+from jetstream.selfservice import TASAPIQuery, run_tas_api_query
 
 
 @admin.register(models.TASAllocationReport)
