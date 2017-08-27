@@ -26,6 +26,7 @@ class TASAPIQuery(models.Model):
     query = models.TextField('Query')
 
     class Meta:
+        app_label = 'jetstream'
         managed = False
         verbose_name = 'TAS API Query'
         verbose_name_plural = 'TAS API Queries'
