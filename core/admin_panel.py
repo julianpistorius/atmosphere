@@ -1,5 +1,8 @@
 from django.conf.urls import url
 from django.contrib import admin
+from django.contrib.admin.options import csrf_protect_m
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
 
 
 class AbstractAdminPanel(admin.ModelAdmin):
@@ -11,17 +14,18 @@ class AbstractAdminPanel(admin.ModelAdmin):
         ]
         return urls
 
+    @csrf_protect_m
+    @method_decorator(staff_member_required)
     def changelist_view(self, request, extra_context=None):
         """
         The 'change list' admin view for a 'fake' model.
 
-        Subclass this class and implement this method yourself.
-
-        Also make sure to wrap it in these decorators:
+        Subclass this class and implement this method yourself if necessary.
+        If you do, make sure to wrap it in these decorators:
         @csrf_protect_m
         @method_decorator(staff_member_required)
         """
-        raise NotImplementedError
+        return self.model.admin_panel_view(request, extra_context)
 
     def has_add_permission(self, request):
         return False

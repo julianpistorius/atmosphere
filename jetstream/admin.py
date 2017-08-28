@@ -21,3 +21,8 @@ class TASAPIQueryAdminPanel(AbstractAdminPanel):
     @method_decorator(staff_member_required)
     def changelist_view(self, request, extra_context=None):
         return tas_api_panel.run_tas_api_query(request)
+
+
+@admin.register(tas_api_panel.TACCUserForXSEDEUsername)
+class TACCUserForXSEDEUsernameAdminPanel(AbstractAdminPanel):
+    pass
