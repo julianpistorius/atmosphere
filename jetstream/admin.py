@@ -20,3 +20,8 @@ class TACCUserForXSEDEUsernameAdminPanel(AbstractAdminPanel):
 @admin.register(tas_api_panel.ActiveAllocations)
 class ActiveAllocationsAdminPanel(AbstractAdminPanel):
     pass
+
+
+@admin.register(tas_api_panel.ProjectsWithActiveAllocation)
+class ProjectsWithActiveAllocationAdminPanel(AbstractAdminPanel):
+    pass
