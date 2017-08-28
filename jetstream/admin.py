@@ -30,3 +30,8 @@ class ProjectsWithActiveAllocationAdminPanel(AbstractAdminPanel):
 @admin.register(tas_api_panel.ProjectsForUser)
 class ProjectsForUserAdminPanel(AbstractAdminPanel):
     pass
+
+
+@admin.register(tas_api_panel.UsersForProject)
+class UsersForProjectAdminPanel(AbstractAdminPanel):
+    pass
