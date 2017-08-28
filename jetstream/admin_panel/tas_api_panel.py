@@ -1,4 +1,5 @@
 import copy
+
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db import models
@@ -132,6 +133,45 @@ def _get_projects_with_active_allocation(request):
     return render(request, 'tas_api_query.html', context)
 
 
+class ProjectsForUser(models.Model):
+    tacc_username = models.CharField('TACC Username', max_length=255, default='jlf599')
+
+    class Meta:
+        app_label = 'jetstream'
+        managed = False
+        verbose_name = 'Projects for User'
+
+    @staticmethod
+    def admin_panel_view(request, extra_context=None):
+        return _get_projects_for_user(request)
+
+
+@staff_member_required
+def _get_projects_for_user(request):
+    context = {}
+
+    form_class = modelform_factory(ProjectsForUser,
+                                   fields=['tacc_username'],
+                                   widgets={'tacc_username': TextInput})
+
+    if request.method == 'POST':
+        request.POST = request.POST.copy()
+        form = form_class(request.POST)
+        form.is_valid()
+        tacc_username = form.cleaned_data['tacc_username']
+        info, header, rows = _execute_tas_api_query(PROJECTS_FOR_USER, tacc_username)
+        context['info'] = info
+        context['header'] = header
+        context['rows'] = rows
+    else:
+        form = form_class()
+
+    context['form'] = form
+    context['title'] = ProjectsForUser._meta.verbose_name
+
+    return render(request, 'tas_api_query.html', context)
+
+
 def _execute_tas_api_query(query_type, query=None):
     # return something like: 'Success', ['col1', 'col2'], [['row1_val1', 'row1_val2'], ['row2_val1', 'row2_val2']]
     tacc_api = settings.TACC_API_URL
@@ -172,6 +212,24 @@ def _execute_tas_api_query(query_type, query=None):
     elif query_type == PROJECTS_WITH_ACTIVE_ALLOCATION:
         resource = query
         path = '/v1/projects/resource/%s' % resource
+        url = tacc_api + path
+        try:
+            response, data = tas_api.tacc_api_get(url)
+            assert isinstance(data, dict)
+            status = data.get('status', None)
+            message = data.get('message', None)
+            info = 'Response: {}, status: {}, message: {}'.format(response.__repr__(), status, message)
+            result = data.get('result', [{}])
+            result_headers = copy.copy(result[0].keys())
+            hard_coded_headers = ['chargeCode', 'title']
+            trimmed_result_headers = list(set(result_headers) - set(hard_coded_headers))
+            header = hard_coded_headers + trimmed_result_headers
+            rows = [[row.get(key) for key in header] for row in result]
+        except TASAPIException as e:
+            info = e
+    elif query_type == PROJECTS_FOR_USER:
+        tacc_username = query
+        path = '/v1/projects/username/%s' % tacc_username
         url = tacc_api + path
         try:
             response, data = tas_api.tacc_api_get(url)
