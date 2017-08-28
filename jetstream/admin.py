@@ -15,3 +15,8 @@ class TASReportAdmin(admin.ModelAdmin):
 @admin.register(tas_api_panel.TACCUserForXSEDEUsername)
 class TACCUserForXSEDEUsernameAdminPanel(AbstractAdminPanel):
     pass
+
+
+@admin.register(tas_api_panel.ActiveAllocations)
+class ActiveAllocationsAdminPanel(AbstractAdminPanel):
+    pass
