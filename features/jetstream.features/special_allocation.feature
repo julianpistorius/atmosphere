@@ -87,8 +87,8 @@ Feature: Special Allocations
 
     When we update snapshots
     Then we should have the following allocation source snapshots
-      | name         | compute_used |
-      | TG-ASC160018 | 3000001.100  |
+      | name         | compute_used | compute_allowed |
+      | TG-ASC160018 | 3000001.100  | 5000000         |
     And we should have the following user allocation source snapshots
       | atmosphere_username | allocation_source | compute_used | burn_rate |
       | user110             | TG-ASC160018      | 0.000        | 0.000     |
@@ -130,8 +130,8 @@ Feature: Special Allocations
 
     When we update snapshots
     Then we should have the following allocation source snapshots
-      | name         | compute_used |
-      | TG-BIO150062 | 781768.01    |
+      | name         | compute_used | compute_allowed |
+      | TG-BIO150062 | 781768.01    | 1000000         |
     And we should have the following user allocation source snapshots
       | atmosphere_username | allocation_source | compute_used | burn_rate |
       | user108             | TG-BIO150062      | 0.000        | 0.000     |
@@ -175,9 +175,9 @@ Feature: Special Allocations
 
     When we update snapshots
     Then we should have the following allocation source snapshots
-      | name         | compute_used |
-      | TG-TRA160003 | 87914.06     |
-      | TG-ASC160018 | 3000001.100  |
+      | name         | compute_used | compute_allowed |
+      | TG-TRA160003 | 87914.06     | 600000          |
+      | TG-ASC160018 | 3000001.100  | 5000000         |
     And we should have the following user allocation source snapshots
       | atmosphere_username | allocation_source | compute_used | burn_rate |
       | user111             | TG-TRA160003      | 0.000        | 0.000     |
