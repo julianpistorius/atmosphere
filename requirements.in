@@ -26,6 +26,8 @@ flower
 
 gevent
 
+more_itertools
+
 apache-libcloud
 requests[security]
 python-dateutil
