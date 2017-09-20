@@ -13,7 +13,7 @@ from api.tests.factories import (
 )
 from django.core.urlresolvers import reverse
 
-EXPECTED_FIELD_COUNT = 13
+EXPECTED_FIELD_COUNT = 14
 
 
 class ApplicationTests(APITestCase, APISanityTestCase):
@@ -97,6 +97,7 @@ class ApplicationTests(APITestCase, APISanityTestCase):
         self.assertIn('is_public', data)
         self.assertIn('icon', data)
         self.assertIn('start_date', data)
+        self.assertIn('access_list', data)
         self.assertIn('tags', data)
         self.assertIn('versions', data)
 
