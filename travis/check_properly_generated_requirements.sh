@@ -29,6 +29,10 @@ function main {
     fi;
 
     # Ensure that requirements.txt was generated properly
+    echo 'Expected:'
+    generate_requirements;
+    echo 'Actual:'
+    cat requirements.txt;
     diff <(generate_requirements | normalize) <(normalize < requirements.txt);
 
     # If the expected didn't meet the actual
@@ -56,7 +60,7 @@ function normalize {
 }
 
 function generate_requirements {
-    pip-compile --max-rounds 20 --dry-run -o requirements.txt requirements.in 2>/dev/null;
+    pip-compile --dry-run -o requirements.txt requirements.in 2>/dev/null;
 }
 
 function pip-tools-version {
